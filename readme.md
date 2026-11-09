@@ -1,46 +1,61 @@
-# Delicious Bites
+# Foody 🍲
 
-Welcome to the Delicious Recipes App! This application allows users to explore, share, and save their favorite recipes from around the world. Whether you're a seasoned chef or a home cook, you'll find something to inspire your culinary adventures.
+A recipe browser built with **React**, **Tailwind CSS** and **Axios**, powered by the free [TheMealDB API](https://www.themealdb.com/api.php).
 
 ## Features
 
-- Browse a wide variety of recipes categorized by cuisine, meal type, and dietary preferences.
-- Search for recipes by ingredients, cooking time, or difficulty level.
-- Save your favorite recipes to your personal collection for easy access.
-- Share recipes with friends and family via social media or email.
-- Submit your own recipes and get feedback from the community.
-- Rate and review recipes to help others find the best dishes.
-- Create shopping lists based on selected recipes.
-- Step-by-step cooking instructions with photos and videos.
-- User profiles to track your cooking journey and achievements.
-- Responsive design for seamless use on desktop and mobile devices.
+- **Browse recipes**: a responsive grid of recipe cards showing the photo, name and category, with a "Show more" button for long lists.
+- **Search** by name or keyword. A keyword also matches recipes that use it as an ingredient, so "salmon" finds *Salmon Teriyaki* and any other dish made with salmon.
+- **Filters**:
+  - **Category / meal type** (Breakfast, Starter, Side, Dessert, Seafood, Vegetarian, …) as quick chips
+  - **Cuisine** (Italian, Japanese, Indian, …)
+  - **Ingredients**: pick one or more with autocomplete. Recipes must contain *all* of them.
+- **Search and filters combine** (AND). The active filters are shown as removable chips, and there's a "Clear all" button.
+- **Recipe details page** (`/recipe/:id`): ingredients with measures and pictures (you can tick them off as you cook), numbered steps, category and cuisine links, tags, an embedded YouTube video and a link to the original source.
+- **Easy return**: "Back to recipes" brings you back to the same search and filters. They are stored in the URL, so filtered views can also be bookmarked or shared.
+- **Favorites**: tap the heart on any card or recipe. Favorites are saved in `localStorage`, stay after a reload, and have their own page.
+- **Surprise me**: opens a random recipe.
+- Loading skeletons, empty and error states (with retry), keyboard-friendly controls, and a mobile-first layout.
 
-## Installation
+## Tech stack
 
-To install the Delicious Recipes App, follow these steps:
+| Concern  | Choice |
+| -------- | ------ |
+| UI       | React 19 + React Router 7 |
+| Styling  | Tailwind CSS 4 |
+| Requests | Axios (with an in-memory response cache) |
+| Build    | Vite |
 
-1. Clone the repository:
+## Getting started
 
-   ```
-   git clone https://github.com/githubscientist/foody
-   ```
+```bash
+npm install
+npm run dev       # http://localhost:5173
+npm run build     # production build in dist/
+npm run preview   # serve the production build
+```
 
-2. Navigate to the project directory:
+The app uses client-side routing. When you deploy to a static host, send unknown paths to `index.html`. `public/_redirects` (Netlify) and `vercel.json` (Vercel) already do this.
 
-   ```
-   cd foody
-   ```
+## How search & filtering works
 
-3. Open `index.html` in your web browser to start using the app.
+TheMealDB's free API filters by only **one** value per request and returns only id, name and thumbnail from its filter endpoints. To combine filters:
 
-## Contributing
+1. On load, the app requests `categories.php` and then `filter.php?c=<category>` for each category. Together these give the full catalogue, with every meal's category, in about 14 small requests.
+2. Category and name/keyword matching happen in the browser on that catalogue, so they are instant.
+3. Cuisine (`filter.php?a=`) and each selected ingredient (`filter.php?i=`) are fetched as sets of ids and intersected with the catalogue.
+4. Keyword search also runs a debounced `filter.php?i=<keyword>`, so the search box finds dishes by ingredient too.
 
-We welcome contributions from the community! If you'd like to contribute, please follow these steps:
+Each response is cached for the session, so going back and forth never fetches the same thing twice.
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with clear messages.
-4. Push your changes to your forked repository.
-5. Open a pull request to the main repository.
+## Project structure
 
-Please ensure your code adheres to our coding standards and includes appropriate tests.
+```
+src/
+  api/mealdb.js            Axios client, endpoints, response parsing helpers
+  context/FavoritesContext Favorites state persisted to localStorage
+  hooks/                   useAsync (request state + retry), useDebounce
+  components/              Navbar, RecipeCard/Grid, SearchBar, CategoryChips,
+                           IngredientPicker, FavoriteButton, status messages
+  pages/                   Home, RecipeDetail, Favorites, NotFound
+```
